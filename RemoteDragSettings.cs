@@ -1,12 +1,17 @@
-﻿using Sandbox.ModAPI;
+﻿using Sandbox.Game.Entities;
+using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
+using VRage;
+using VRage.ModAPI;
+using VRageMath;
 
 namespace Draygo.AtmosphericPhysics.Settings
 {
 	public class RemoteDragSettings
 	{
 		private bool init = false;
+		private bool m_Response = false;
 		public const long MODID = 571920453;//mod ID of the Aerodynamic Physics mod this is the mod we want to talk to. 
 		private const int GETSETTINGS = 1;
 
@@ -26,7 +31,9 @@ namespace Draygo.AtmosphericPhysics.Settings
 			{
 				if (!init)
 					Register();
-				return m_DigiPhysics;
+				if (m_Response)
+					return (bool)GetSetting((int)SettingsEnum.digi);
+                return m_DigiPhysics;
 			}
 		}
 		public bool AdvLift
@@ -35,11 +42,22 @@ namespace Draygo.AtmosphericPhysics.Settings
 			{
 				if (!init)
 					Register();
+				if (m_Response)
+					return (bool)GetSetting((int)SettingsEnum.advlift);
 				return m_AdvLift;
 			}
 		}
-		public static Action OnDigiPhysicsChanged;
-		public static Action OnAdvLiftChanged;
+		public static Func<int, object> GetSetting;
+		public static Func<MyPlanet, Vector3D, IMyEntity, Vector3D> WindGetter;
+
+
+		public Vector3D? GetWind(MyPlanet Planet, Vector3D pos , IMyEntity  ent)
+		{
+			if (WindGetter != null)
+				return WindGetter(Planet, pos, ent);
+			return null;
+		}
+
 		public void Register()
 		{
 			if(init)
@@ -59,37 +77,19 @@ namespace Draygo.AtmosphericPhysics.Settings
 			}
 			init = false;
 		}
+		
 		private void Handler(object obj)
 		{
-			
-			if (obj is int)
-			{
-				return;
-			}
 			try
 			{
-				Dictionary<int, bool> Response = (Dictionary<int, bool>)obj;
-				bool _ret;
-				if (Response.TryGetValue((int)SettingsEnum.digi, out _ret))
+				if (m_Response)
+					return;
+				if (obj is MyTuple<Func<int, object>, Func<MyPlanet, Vector3D, IMyEntity, Vector3D>>)
 				{
-					
-					if (m_DigiPhysics != _ret)
-					{
-						m_DigiPhysics = _ret;
-						if (OnDigiPhysicsChanged != null)
-							OnDigiPhysicsChanged();
-					}
-
-				}
-				if (Response.TryGetValue((int)SettingsEnum.advlift, out _ret))
-				{
-					
-					if (_ret != m_AdvLift)
-					{
-						m_AdvLift = _ret;
-						if (OnAdvLiftChanged != null)
-							OnAdvLiftChanged();
-					}
+					m_Response = true;
+					var tupl = (MyTuple<Func<int, object>,Func<MyPlanet, Vector3D, IMyEntity, Vector3D>>)obj;
+					GetSetting = tupl.Item1;
+					WindGetter = tupl.Item2;
 
 				}
 			}
