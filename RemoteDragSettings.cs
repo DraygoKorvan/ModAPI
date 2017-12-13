@@ -47,14 +47,40 @@ namespace Draygo.AtmosphericPhysics.Settings
 				return m_AdvLift;
 			}
 		}
-		public static Func<int, object> GetSetting;
-		public static Func<MyPlanet, Vector3D, IMyEntity, Vector3D> WindGetter;
-
+		private static Func<int, object> GetSetting;
+		private static Func<MyPlanet, Vector3D, IMyEntity, Vector3D> WindGetter;
+		private static Func<IMyEntity, BoundingBox?> SurfaceAreaGetter;
+		private static Func<IMyEntity, MyTuple<double, double, double, double, double, double>?> HeatGetter;
 
 		public Vector3D? GetWind(MyPlanet Planet, Vector3D pos , IMyEntity  ent)
 		{
 			if (WindGetter != null)
 				return WindGetter(Planet, pos, ent);
+			return null;
+		}
+
+		/// <summary>
+		/// Gets the visible surface area of an object
+		/// </summary>
+		/// <param name="ent">Entity</param>
+		/// <returns>Local aligned bounding box</returns>
+		public BoundingBox? GetSurfaceArea(IMyEntity ent)
+		{
+			if (SurfaceAreaGetter != null)
+				return SurfaceAreaGetter(ent);
+			return null;
+		}
+		/// <summary>
+		/// Returns heat data, null if entity does not have a drag calculation, otherwise returns (heat.front, heat.back, heat.left, heat.right, heat.up, heat.down)
+		/// </summary>
+		/// <param name="ent">Entity</param>
+		/// <returns>MyTuple<double, double, double, double, double, double>(heat.front, heat.back, heat.left, heat.back, heat.up, heat.down)</returns>
+		public MyTuple<double, double, double, double, double, double>? GetHeat(IMyEntity ent)
+		{
+			if (HeatGetter != null)
+			{
+				return HeatGetter(ent);
+			}
 			return null;
 		}
 
@@ -90,15 +116,18 @@ namespace Draygo.AtmosphericPhysics.Settings
 					var tupl = (MyTuple<Func<int, object>,Func<MyPlanet, Vector3D, IMyEntity, Vector3D>>)obj;
 					GetSetting = tupl.Item1;
 					WindGetter = tupl.Item2;
-
+				}
+				if (obj is MyTuple<Func<IMyEntity, BoundingBox?>, Func<IMyEntity, MyTuple<double, double, double, double, double, double>?>>)
+				{
+					var tupl = (MyTuple<Func<IMyEntity, BoundingBox?>, Func<IMyEntity, MyTuple<double, double, double, double, double, double>?>>)obj;
+					SurfaceAreaGetter = tupl.Item1;
+					HeatGetter = tupl.Item2;
 				}
 			}
 			catch
 			{
 
 			}
-
-			
 		}
 	}
 }
