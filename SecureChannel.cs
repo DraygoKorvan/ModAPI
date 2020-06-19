@@ -36,7 +36,7 @@ namespace Draygo.SecureChannel
         Dictionary<ushort, Action<ulong, byte[]>> secureMessageHandlers = new Dictionary<ushort, Action<ulong, byte[]>>();
         Dictionary<ushort, Action<ulong, byte[]>> messageHandlers = new Dictionary<ushort, Action<ulong, byte[]>>();
         ulong modid = 0;
-        
+
         Random rgen;
         private List<IMyPlayer> idents = new List<IMyPlayer>();
         private bool m_registered = false;
@@ -52,7 +52,7 @@ namespace Draygo.SecureChannel
 
         [ProtoContract]
         public struct MessageData
-        {	
+        {
             [ProtoMember(1)]
             public ulong modid;
             [ProtoMember(2)]
@@ -66,8 +66,7 @@ namespace Draygo.SecureChannel
             instance = this;
         }
 
-
-        private void recieveMessage(byte[] obj)
+        private void receiveMessage(byte[] obj)
         {
             try
             {
@@ -83,24 +82,27 @@ namespace Draygo.SecureChannel
                     if (MyAPIGateway.Session.IsServer)
                     {
                         //add key from client to dictionary. 
-
                         if (encryptlookuptable.ContainsKey(message.steamid))
                         {
                             encryptlookuptable.Remove(message.steamid);
                         }
                         rgen.NextBytes(selfkey);
+
                         byte[] mdata = MyAPIGateway.Utilities.SerializeToBinary<MessageData>(new MessageData()
                         {
                             modid = this.modid,
                             messageid = 0,
                             message = selfkey
                         });
+
                         EncryptDecrypt(ref mdata, ref data.message);
+
                         var hello = new SecureMessage()
                         {
                             steamid = 0,
                             data = mdata
                         };
+
                         //we could send this secure?
                         MyAPIGateway.Multiplayer.SendMessageTo(SECURECHANNEL_ID, MyAPIGateway.Utilities.SerializeToBinary<SecureMessage>(hello), message.steamid);
                         EncryptDecrypt(ref data.message, ref selfkey);
@@ -119,16 +121,13 @@ namespace Draygo.SecureChannel
             {
                 //do nothing
             }
-            
-
         }
 
-        private void recieveSecureMessage(byte[] obj)
+        private void receiveSecureMessage(byte[] obj)
         {
             try
             {
                 var message = MyAPIGateway.Utilities.SerializeFromBinary<SecureMessage>(obj);
-                
                 if (!TryEncryptDecrypt(ref message.data, message.steamid))
                 {
                     return;
@@ -138,9 +137,9 @@ namespace Draygo.SecureChannel
                 {
                     return;
                 }
-                if(data.messageid == 0)
+                if (data.messageid == 0)
                 {
-                    if(!MyAPIGateway.Session.IsServer)
+                    if (!MyAPIGateway.Session.IsServer)
                     {
                         if (message.steamid == 0)
                         {
@@ -159,7 +158,6 @@ namespace Draygo.SecureChannel
             {
 
             }
-
         }
 
         /// <summary>
@@ -173,8 +171,7 @@ namespace Draygo.SecureChannel
             {
                 return;//do not register 0
             }
-                
-            if(secureMessageHandlers.ContainsKey(messageid))
+            if (secureMessageHandlers.ContainsKey(messageid))
             {
                 return;//do not register
             }
@@ -204,7 +201,6 @@ namespace Draygo.SecureChannel
             {
                 return;//do not register 0
             }
-
             if (messageHandlers.ContainsKey(messageid))
             {
                 return;//do not register
@@ -232,20 +228,21 @@ namespace Draygo.SecureChannel
         /// <param name="reliable">Optional, send reliably</param>
         public void SendSecureMessageToServer(ushort messageId, byte[] data, bool reliable = true)
         {
-
             var edata = MyAPIGateway.Utilities.SerializeToBinary<MessageData>(new MessageData()
             {
                 modid = this.modid,
                 messageid = messageId,
                 message = data
             });
+
             TryEncryptDecrypt(ref edata, MyAPIGateway.Session.Player.SteamUserId);
+
             var sdata = MyAPIGateway.Utilities.SerializeToBinary<SecureMessage>(new SecureMessage()
             {
                 steamid = MyAPIGateway.Session.Player.SteamUserId,
                 data = edata
             });
-            
+
             MyAPIGateway.Multiplayer.SendMessageToServer(SECURECHANNEL_ID, sdata, reliable);
         }
 
@@ -268,7 +265,7 @@ namespace Draygo.SecureChannel
             var players = MyAPIGateway.Multiplayer.Players;
             idents.Clear();
             players.GetPlayers(idents);
-            foreach( var ident in idents)
+            foreach (var ident in idents)
             {
                 if (ident.IsBot)
                     continue;
@@ -276,15 +273,15 @@ namespace Draygo.SecureChannel
                     continue;
                 var edata = data;
                 TryEncryptDecrypt(ref edata, ident.SteamUserId);
+
                 var sdata = MyAPIGateway.Utilities.SerializeToBinary<SecureMessage>(new SecureMessage()
                 {
                     steamid = ident.SteamUserId,
                     data = edata
                 });
+
                 MyAPIGateway.Multiplayer.SendMessageTo(SECURECHANNEL_ID, sdata, ident.SteamUserId, reliable);
             }
-
-            
         }
 
         /// <summary>
@@ -297,7 +294,6 @@ namespace Draygo.SecureChannel
         public void SendSecureMessageTo(ushort messageId, byte[] data, ulong recipient, bool reliable = true)
         {
 
-
             var edata = MyAPIGateway.Utilities.SerializeToBinary<MessageData>(new MessageData()
             {
                 modid = this.modid,
@@ -305,16 +301,16 @@ namespace Draygo.SecureChannel
                 message = data
             });
 
-            TryEncryptDecrypt(ref edata, recipient);
+			TryEncryptDecrypt(ref edata, recipient);
+
             var sdata = MyAPIGateway.Utilities.SerializeToBinary<SecureMessage>(new SecureMessage()
             {
                 steamid = recipient,
                 data = edata
             });
+
             MyAPIGateway.Multiplayer.SendMessageTo(SECURECHANNEL_ID, sdata, recipient, reliable);
         }
-
-
 
         /// <summary>
         /// Client to Server. Not secure can be spoofed. Do not use this for privileged traffic. 
@@ -325,7 +321,9 @@ namespace Draygo.SecureChannel
         public void SendMessageToServer(ushort messageId, byte[] data, bool reliable = true)
         {
 
-            var sdata = MyAPIGateway.Utilities.SerializeToBinary<SecureMessage>(new SecureMessage() { steamid = MyAPIGateway.Session.Player.SteamUserId,
+            var sdata = MyAPIGateway.Utilities.SerializeToBinary<SecureMessage>(new SecureMessage()
+            {
+                steamid = MyAPIGateway.Session.Player.SteamUserId,
                 data = MyAPIGateway.Utilities.SerializeToBinary<MessageData>(new MessageData()
                 {
                     modid = this.modid,
@@ -335,6 +333,7 @@ namespace Draygo.SecureChannel
             });
             MyAPIGateway.Multiplayer.SendMessageToServer(UNSECURECHANNEL_ID, sdata, reliable);
         }
+
         /// <summary>
         /// Server to all connected clients. Not secure and can be spoofed, do not use for privileged traffic.
         /// </summary>
@@ -356,6 +355,7 @@ namespace Draygo.SecureChannel
             });
             MyAPIGateway.Multiplayer.SendMessageToOthers(UNSECURECHANNEL_ID, sdata, reliable);
         }
+
         /// <summary>
         /// Server to a single client. Not secure and can be spoofed, do not use for privileged traffic.
         /// </summary>
@@ -363,7 +363,7 @@ namespace Draygo.SecureChannel
         /// <param name="data">message</param>
         /// <param name="recipient">steamid of client</param>
         /// <param name="reliable">Optional, send reliably</param>
-        public void	SendMessageTo(ushort messageId, byte[] data, ulong recipient, bool reliable = true)
+        public void SendMessageTo(ushort messageId, byte[] data, ulong recipient, bool reliable = true)
         {
 
             var sdata = MyAPIGateway.Utilities.SerializeToBinary<SecureMessage>(new SecureMessage()
@@ -383,18 +383,18 @@ namespace Draygo.SecureChannel
         {
 
             base.Init(sessionComponent);
-            
+
             modid = ulong.Parse(this.ModContext.ModId.Substring(0, this.ModContext.ModId.Length - 4));
             if (MyAPIGateway.Multiplayer.MultiplayerActive)
             {
                 m_registered = true;
-                MyAPIGateway.Multiplayer.RegisterMessageHandler(SECURECHANNEL_ID, recieveSecureMessage);
-                MyAPIGateway.Multiplayer.RegisterMessageHandler(UNSECURECHANNEL_ID, recieveMessage);
+                MyAPIGateway.Multiplayer.RegisterMessageHandler(SECURECHANNEL_ID, receiveSecureMessage);
+                MyAPIGateway.Multiplayer.RegisterMessageHandler(UNSECURECHANNEL_ID, receiveMessage);
                 rgen = new Random();
                 if (!MyAPIGateway.Session.IsServer)
                 {
 
-                    
+
                     rgen.NextBytes(selfkey);
 
                     var hello = new SecureMessage()
@@ -411,16 +411,17 @@ namespace Draygo.SecureChannel
                 }
             }
         }
+
         protected override void UnloadData()
         {
-            if(m_registered)
+            if (m_registered)
             {
-                MyAPIGateway.Multiplayer.UnregisterMessageHandler(SECURECHANNEL_ID, recieveSecureMessage);
-                MyAPIGateway.Multiplayer.UnregisterMessageHandler(UNSECURECHANNEL_ID, recieveMessage);
+                MyAPIGateway.Multiplayer.UnregisterMessageHandler(SECURECHANNEL_ID, receiveSecureMessage);
+                MyAPIGateway.Multiplayer.UnregisterMessageHandler(UNSECURECHANNEL_ID, receiveMessage);
             }
             instance = null;
         }
-    
+
 
         private void EncryptDecrypt(ref byte[] szPlainText, ref byte[] szEncryptionKey)
         {
@@ -435,7 +436,7 @@ namespace Draygo.SecureChannel
         private bool TryEncryptDecrypt(ref byte[] szPlainText, ulong steamid)
         {
             byte[] szEncryptionKey;
-            if(MyAPIGateway.Session.IsServer)
+            if (MyAPIGateway.Session.IsServer)
             {
                 if (encryptlookuptable.TryGetValue(steamid, out szEncryptionKey))
                 {
@@ -450,7 +451,5 @@ namespace Draygo.SecureChannel
                 return true;
             }
         }
-
-
     }
 }
