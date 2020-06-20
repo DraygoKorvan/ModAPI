@@ -384,10 +384,11 @@ namespace Draygo.SecureChannel
 
             base.Init(sessionComponent);
 
-            modid = ulong.Parse(this.ModContext.ModId.Substring(0, this.ModContext.ModId.Length - 4));
+            
             if (MyAPIGateway.Multiplayer.MultiplayerActive)
             {
-                m_registered = true;
+				modid = ulong.Parse(this.ModContext.ModId.Substring(0, this.ModContext.ModId.Length - 4));
+				m_registered = true;
                 MyAPIGateway.Multiplayer.RegisterMessageHandler(SECURECHANNEL_ID, receiveSecureMessage);
                 MyAPIGateway.Multiplayer.RegisterMessageHandler(UNSECURECHANNEL_ID, receiveMessage);
                 rgen = new Random();
