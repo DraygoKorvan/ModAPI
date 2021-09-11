@@ -25,6 +25,16 @@ namespace Draygo.AtmosphericPhysics.Settings
 			showburn,
 			showsmoke
 		}
+		public bool Heartbeat
+		{
+			get
+			{
+				if (!init)
+					Register();
+				return m_Response;
+			}
+		}
+
 		public bool DigiPhysics
 		{
 			get
@@ -59,6 +69,8 @@ namespace Draygo.AtmosphericPhysics.Settings
 			return null;
 		}
 
+
+
 		/// <summary>
 		/// Gets the visible surface area of an object
 		/// </summary>
@@ -74,7 +86,7 @@ namespace Draygo.AtmosphericPhysics.Settings
 		/// Returns heat data, null if entity does not have a drag calculation, otherwise returns (heat.front, heat.back, heat.left, heat.right, heat.up, heat.down)
 		/// </summary>
 		/// <param name="ent">Entity</param>
-		/// <returns>MyTuple<double, double, double, double, double, double>(heat.front, heat.back, heat.left, heat.back, heat.up, heat.down)</returns>
+		/// <returns>MyTuple<double, double, double, double, double, double>(heat.front, heat.back, heat.left, heat.right, heat.up, heat.down)</returns>
 		public MyTuple<double, double, double, double, double, double>? GetHeat(IMyEntity ent)
 		{
 			if (HeatGetter != null)
@@ -108,14 +120,14 @@ namespace Draygo.AtmosphericPhysics.Settings
 		{
 			try
 			{
-				if (m_Response)
-					return;
+
 				if (obj is MyTuple<Func<int, object>, Func<MyPlanet, Vector3D, IMyEntity, Vector3D>>)
 				{
 					m_Response = true;
 					var tupl = (MyTuple<Func<int, object>,Func<MyPlanet, Vector3D, IMyEntity, Vector3D>>)obj;
 					GetSetting = tupl.Item1;
 					WindGetter = tupl.Item2;
+
 				}
 				if (obj is MyTuple<Func<IMyEntity, BoundingBox?>, Func<IMyEntity, MyTuple<double, double, double, double, double, double>?>>)
 				{
